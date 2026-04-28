@@ -35,8 +35,11 @@ func (m *TimestampManager) getTimestamp( //
 	ctx context.Context, request mcp.CallToolRequest, //
 ) (*mcp.CallToolResult, error) {
 
-	session := server.ClientSessionFromContext(ctx).SessionID()
-	now, ok := m.cache.Get(session)
+	session := server.ClientSessionFromContext(ctx)
+	if session == nil {
+		return mcp.NewToolResultError("session not found"), nil
+	}
+	now, ok := m.cache.Get(session.SessionID())
 	if !ok {
 		now = "No timestamp set"
 	}
