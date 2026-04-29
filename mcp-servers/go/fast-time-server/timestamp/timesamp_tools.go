@@ -14,21 +14,25 @@ type TimestampManager struct {
 	cache otter.Cache[string, string]
 }
 
-func NewTimestampManager() *TimestampManager {
+func NewTimestampManager(s *server.MCPServer) *TimestampManager {
 	cache, _ := otter.MustBuilder[string, string](1_000_000).
 		WithTTL(time.Duration(42 * time.Second)).
 		Build()
-	return &TimestampManager{cache: cache}
+	manager := &TimestampManager{cache: cache}
+	manager.AddTimestampTools(s)
+	return manager
 }
 
 func (m *TimestampManager) setTimestamp( //
 	ctx context.Context, request mcp.CallToolRequest, //
 ) (*mcp.CallToolResult, error) {
+	note := request.GetString("note", "")
 	now := time.Now().Format(time.RFC3339)
 	session := server.ClientSessionFromContext(ctx)
-	m.cache.Set(session.SessionID(), now)
+	txt := now + " - " + note
+	m.cache.Set(session.SessionID(), txt)
 
-	return mcp.NewToolResultText(now), nil
+	return mcp.NewToolResultText(txt), nil
 }
 
 func (m *TimestampManager) getTimestamp( //
@@ -59,7 +63,12 @@ func (m *TimestampManager) clearTimestamp( //
 
 func (m *TimestampManager) AddTimestampTools(s *server.MCPServer) {
 	set_timestamp := mcp.NewTool( //
-		"set_timestamp", mcp.WithDescription("Sets session timestamp"),
+		"set_timestamp", //
+		mcp.WithDescription("Sets session timestamp with a note"),
+		mcp.WithString("note",
+			mcp.Required(),
+			mcp.Description("Note to attach to timestamp"),
+		),
 	)
 	get_timestamp := mcp.NewTool( //
 		"get_timestamp", mcp.WithDescription("Gets session timestamp"),

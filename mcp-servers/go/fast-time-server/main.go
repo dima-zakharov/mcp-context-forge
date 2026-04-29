@@ -953,8 +953,7 @@ func main() {
 		),
 	)
 	s.AddTool(convertTimeTool, handleConvertTime)
-	timestampManager := timestamp.NewTimestampManager()
-	timestampManager.AddTimestampTools(s)
+	timestamp.NewTimestampManager(s)
 
 	/* ----------------------- register resources ---------------------- */
 	// Register timezone information resource

@@ -11,7 +11,7 @@ require (
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/maypok86/otter v1.2.4 // indirect
+	github.com/maypok86/otter v1.2.4 // direct
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 )
