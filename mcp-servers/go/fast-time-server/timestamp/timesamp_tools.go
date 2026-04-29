@@ -15,9 +15,12 @@ type TimestampManager struct {
 }
 
 func NewTimestampManager(s *server.MCPServer) *TimestampManager {
-	cache, _ := otter.MustBuilder[string, string](1_000_000).
-		WithTTL(time.Duration(42 * time.Second)).
+	cache, err := otter.MustBuilder[string, string](1_000_000).
+		WithTTL(time.Duration(5 * time.Minute)).
 		Build()
+	if err != nil {
+		panic(err)
+	}
 	manager := &TimestampManager{cache: cache}
 	manager.AddTimestampTools(s)
 	return manager
@@ -29,6 +32,9 @@ func (m *TimestampManager) setTimestamp( //
 	note := request.GetString("note", "")
 	now := time.Now().Format(time.RFC3339)
 	session := server.ClientSessionFromContext(ctx)
+	if session == nil {
+		return mcp.NewToolResultError("Session not found"), nil
+	}
 	txt := now + " - " + note
 	m.cache.Set(session.SessionID(), txt)
 
@@ -41,7 +47,7 @@ func (m *TimestampManager) getTimestamp( //
 
 	session := server.ClientSessionFromContext(ctx)
 	if session == nil {
-		return mcp.NewToolResultError("session not found"), nil
+		return mcp.NewToolResultError("Session not found"), nil
 	}
 	now, ok := m.cache.Get(session.SessionID())
 	if !ok {
@@ -55,14 +61,17 @@ func (m *TimestampManager) clearTimestamp( //
 	ctx context.Context, request mcp.CallToolRequest, //
 ) (*mcp.CallToolResult, error) {
 
-	session := server.ClientSessionFromContext(ctx).SessionID()
-	m.cache.Delete(session)
+	session := server.ClientSessionFromContext(ctx)
+	if session == nil {
+		return mcp.NewToolResultError("Session not found"), nil
+	}
+	m.cache.Delete(session.SessionID())
 
 	return mcp.NewToolResultText("Timestamp cleared"), nil
 }
 
 func (m *TimestampManager) AddTimestampTools(s *server.MCPServer) {
-	set_timestamp := mcp.NewTool( //
+	setTimestamp := mcp.NewTool( //
 		"set_timestamp", //
 		mcp.WithDescription("Sets session timestamp with a note"),
 		mcp.WithString("note",
@@ -70,13 +79,13 @@ func (m *TimestampManager) AddTimestampTools(s *server.MCPServer) {
 			mcp.Description("Note to attach to timestamp"),
 		),
 	)
-	get_timestamp := mcp.NewTool( //
+	getTimestamp := mcp.NewTool( //
 		"get_timestamp", mcp.WithDescription("Gets session timestamp"),
 	)
-	clear_timestamp := mcp.NewTool( //
+	clearTimestamp := mcp.NewTool( //
 		"clear_timestamp", mcp.WithDescription("Clears session timestamp"),
 	)
-	s.AddTool(set_timestamp, m.setTimestamp)
-	s.AddTool(get_timestamp, m.getTimestamp)
-	s.AddTool(clear_timestamp, m.clearTimestamp)
+	s.AddTool(setTimestamp, m.setTimestamp)
+	s.AddTool(getTimestamp, m.getTimestamp)
+	s.AddTool(clearTimestamp, m.clearTimestamp)
 }
